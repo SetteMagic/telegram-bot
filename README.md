@@ -30,8 +30,4 @@ chmod +x setup-server.sh update-server.sh
 ./setup-server.sh
 ```
 
-Modifica `.env` inserendo il `BOT_TOKEN` e avvia:
-
-```bash
-sudo docker compose up -d --build
-```
+Lo script `./setup-server.sh` chiede interattivamente i parametri principali (`BOT_TOKEN`, `ADMIN_IDS`, ecc.), salva `.env` con permessi `600`, configura il cron notturno alle `05:00` e avvia automaticamente la prima build e il container Docker.
