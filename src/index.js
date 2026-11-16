@@ -1,19 +1,28 @@
+import path from 'node:path';
 import { createBot } from './bot.js';
 import { loadConfig } from './config.js';
 import { cleanupStaleTempDirs } from './utils/downloader.js';
 import { logger } from './utils/logger.js';
 import { AsyncQueue } from './utils/queue.js';
+import { SeenTracker } from './utils/seenTracker.js';
 
 async function main() {
   const config = loadConfig();
   await cleanupStaleTempDirs();
+
+  const seenTracker = new SeenTracker(path.join(config.dataDir, 'seen-chats.json'));
+  await seenTracker.init();
+
+  if (config.adminIds.size === 0) {
+    logger.warn('ADMIN_IDS non impostato: /ping e notifiche nuovi utenti/gruppi disattivati. Usa /id per leggere il tuo ID.');
+  }
 
   const queue = new AsyncQueue({
     concurrency: 1,
     maxSize: config.maxQueueSize,
   });
 
-  const bot = createBot({ config, queue });
+  const bot = createBot({ config, queue, seenTracker });
   let isShuttingDown = false;
 
   async function shutdown(signal) {
@@ -29,7 +38,7 @@ async function main() {
         new Promise((resolve) => setTimeout(resolve, 5_000)),
       ]);
       await Promise.race([
-        queue.waitForIdle(),
+        Promise.all([queue.waitForIdle(), seenTracker.flush()]),
         new Promise((resolve) => setTimeout(resolve, 5_000)),
       ]);
       logger.info('Arresto completato correttamente.');
@@ -55,7 +64,7 @@ async function main() {
   logger.info('Avvio Bot Telegram in modalità Long Polling...');
   await bot.start({
     drop_pending_updates: config.dropPendingUpdates,
-    allowed_updates: ['message'],
+    allowed_updates: ['message', 'my_chat_member'],
     onStart: (botInfo) => {
       logger.info(`Bot online come @${botInfo.username} (id: ${botInfo.id})`);
     },

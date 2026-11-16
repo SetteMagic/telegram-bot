@@ -6,22 +6,22 @@ function formatUptime(seconds) {
 }
 
 /**
- * Registra il comando diagnostico /ping con stato coda e uso memoria.
+ * Registra il comando diagnostico /ping riservato esclusivamente agli ADMIN_IDS.
  */
 export function registerPingCommand(bot, { queue, config }) {
   bot.command('ping', async (ctx) => {
     const userId = ctx.from?.id;
-    const isAdmin = config.adminIds.size === 0 || (userId !== undefined && config.adminIds.has(userId));
-
-    const lines = ['🏓 <b>Pong!</b> Bot attivo.'];
-    if (isAdmin) {
-      const rssMb = (process.memoryUsage().rss / (1024 * 1024)).toFixed(1);
-      lines.push(
-        `⏱ Uptime: <code>${formatUptime(process.uptime())}</code>`,
-        `🧠 RAM RSS: <code>${rssMb} MiB</code>`,
-        `📥 Coda: <code>${queue.activeCount} attivi / ${queue.size} in attesa</code>`
-      );
+    if (userId === undefined || !config.adminIds.has(userId)) {
+      return;
     }
+
+    const rssMb = (process.memoryUsage().rss / (1024 * 1024)).toFixed(1);
+    const lines = [
+      '🏓 <b>Pong!</b> Bot attivo.',
+      `⏱ Uptime: <code>${formatUptime(process.uptime())}</code>`,
+      `🧠 RAM RSS: <code>${rssMb} MiB</code>`,
+      `📥 Coda: <code>${queue.activeCount} attivi / ${queue.size} in attesa</code>`,
+    ];
 
     await ctx.reply(lines.join('\n'), {
       parse_mode: 'HTML',
