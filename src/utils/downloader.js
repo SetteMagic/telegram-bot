@@ -98,6 +98,7 @@ function classifyFailure(output, timedOut) {
   if (
     lower.includes('there is no video in this post')
     || lower.includes('no video formats found')
+    || (lower.includes('unsupported url') && lower.includes('/photo/'))
   ) {
     return new DownloadError('NO_VIDEO', 'Il link non contiene un video scaricabile.');
   }
@@ -161,10 +162,39 @@ async function readJobArtifacts(jobDir) {
 }
 
 /**
+ * Costruisce la lista di argomenti CLI sicuri per yt-dlp.
+ */
+export function buildYtDlpArgs({ url, maxFileSizeMb, outputTemplate, cookiePath = null }) {
+  return [
+    '--ignore-config',
+    '--no-playlist',
+    '--no-warnings',
+    '--socket-timeout', '15',
+    '--retries', '2',
+    '--max-filesize', `${maxFileSizeMb}M`,
+    '-S', 'vcodec:h264,acodec:aac,res:1080',
+    '-f', 'bv*+ba/b',
+    '--merge-output-format', 'mp4',
+    '--write-info-json',
+    '--clean-info-json',
+    '--restrict-filenames',
+    '-o', outputTemplate,
+    ...(cookiePath ? ['--cookies', cookiePath] : []),
+    '--',
+    url,
+  ];
+}
+
+/**
  * Scarica un video TikTok o Instagram Reel in una directory temporanea isolata.
  * Il chiamante deve sempre invocare `result.cleanup()` in un blocco finally.
  */
 export async function downloadMedia({ url, platform, config }) {
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+    throw new DownloadError('UNKNOWN', 'Protocollo URL non supportato.');
+  }
+
   const jobDir = path.join(os.tmpdir(), `${TEMP_DIR_PREFIX}${crypto.randomUUID()}`);
   await fs.mkdir(jobDir, { recursive: true });
 
@@ -183,26 +213,12 @@ export async function downloadMedia({ url, platform, config }) {
       await fs.copyFile(sourceCookiePath, tempCookiePath);
     }
 
-    const args = [
-      '--no-config',
-      '--no-playlist',
-      '--no-exec',
-      '--no-warnings',
-      '--proto', 'https,http',
-      '--socket-timeout', '15',
-      '--retries', '2',
-      '--max-filesize', `${config.maxFileSizeMb}M`,
-      '-S', 'vcodec:h264,acodec:aac,res:1080',
-      '-f', 'bv*+ba/b',
-      '--merge-output-format', 'mp4',
-      '--write-info-json',
-      '--clean-info-json',
-      '--restrict-filenames',
-      '-o', path.join(jobDir, 'video.%(ext)s'),
-      ...(tempCookiePath ? ['--cookies', tempCookiePath] : []),
-      '--',
-      url,
-    ];
+    const args = buildYtDlpArgs({
+      url: parsedUrl.toString(),
+      maxFileSizeMb: config.maxFileSizeMb,
+      outputTemplate: path.join(jobDir, 'video.%(ext)s'),
+      cookiePath: tempCookiePath,
+    });
 
     const { error, stdout, stderr, timedOut } = await runYtDlp(
       config.ytdlpPath,
