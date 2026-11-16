@@ -148,9 +148,10 @@ fi
 # 4. Rende eseguibile lo script di aggiornamento
 chmod +x "$SCRIPT_DIR/update-server.sh"
 
-# 5. Aggiunge il cron job notturno alle 05:00 senza toccare i cron esistenti (es. discord-bot alle 04:30)
-CRON_CMD="0 5 * * * $SCRIPT_DIR/update-server.sh >> $SCRIPT_DIR/data/update.log 2>&1"
-(crontab -l 2>/dev/null | grep -v "telegram-bot/update-server.sh"; echo "$CRON_CMD") | crontab -
+# 5. Aggiunge il cron job notturno alle 05:00 senza toccare eventuali cron esistenti
+CRON_TARGET="$SCRIPT_DIR/update-server.sh"
+CRON_CMD="0 5 * * * $CRON_TARGET >> $SCRIPT_DIR/data/update.log 2>&1"
+{ crontab -l 2>/dev/null | grep -Fv "$CRON_TARGET" || true; echo "$CRON_CMD"; } | crontab -
 echo "Cron job configurato alle 05:00 (crontab precedente preservato)."
 
 # 6. Avvia il container solo se BOT_TOKEN è già stato configurato
