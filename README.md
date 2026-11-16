@@ -6,7 +6,8 @@ Bot Telegram leggero in Node.js 22 (`grammY` + `yt-dlp`) progettato per girare 2
 
 - Rileva automaticamente link **TikTok** (`tiktok.com/@.../video/...`, `vm.tiktok.com`, `vt.tiktok.com`, `tiktok.com/t/...`) e **Instagram** (`/reel/`, `/reels/`, `/p/`, `/tv/`, `/share/...`) in gruppi, supergruppi (inclusi Topic) e chat private.
 - Scarica il video in MP4 (H.264/AAC), lo invia in risposta al messaggio originale includendo **autore**, **descrizione originale** e **link alla fonte**, e rimuove immediatamente i file temporanei.
-- Comandi: `/start`, `/help`, `/ping`.
+- Comandi: `/start`, `/help`, `/id` (mostra il tuo User ID / Chat ID), `/ping` (diagnostica riservata agli `ADMIN_IDS`).
+- Se imposti `ADMIN_IDS` nel `.env` e avvii il bot una prima volta in privato con `/start`, riceverai una notifica quando un nuovo gruppo o un nuovo utente privato usa il bot per la prima volta.
 
 ## Configurazione BotFather per i Gruppi
 
